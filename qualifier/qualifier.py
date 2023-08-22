@@ -1,4 +1,5 @@
 from PIL import Image
+import numpy as np
 
 def valid_input(image_size: tuple[int, int], tile_size: tuple[int, int], ordering: list[int]) -> bool:
     """
@@ -22,26 +23,6 @@ def valid_input(image_size: tuple[int, int], tile_size: tuple[int, int], orderin
 
 
 def rearrange_tiles(image_path: str, tile_size: tuple[int, int], ordering: list[int], out_path: str) -> None:
-    image = Image.open(image_path)
-    if not valid_input(image.size,tile_size,ordering):
-        return False
-    
-    tiles = (image.size[0]/tile_size[0], image.size[1]/tile_size[1])
-
-    output_img = Image.new("RGBA",image.size)
-    sub_imgs = []
-    for i in ordering:
-        region = (i*tile_size[0],
-                  i*tile_size[1],
-                  tile_size[0]*(i+1),
-                  tile_size[1]*(i+1))
-        sub_imgs.append(image.crop(region))
-
-    positions = zip(range(tiles[0]),range(tiles[1]))    
-    for i in range(tiles[0]*tiles[1]):
-        output_img.paste(sub_imgs[i],positions[i])
-    return output_img
-
     """
     Rearrange the image.
 
@@ -52,4 +33,26 @@ def rearrange_tiles(image_path: str, tile_size: tuple[int, int], ordering: list[
     once. If these conditions do not hold, raise a ValueError with the message:
     "The tile size or ordering are not valid for the given image".
     """
-rearrange_tiles("/qualifier/images/pydis_logo_scrambled.png",(128,128),[0,3,1,2],"image.png")
+
+    image = Image.open(image_path,formats=["png"])
+    if not valid_input(image.size,tile_size,ordering):
+        raise ValueError("The tile size or ordering are not valid for the given image")
+    
+    tiles = (image.size[0]//tile_size[0], image.size[1]//tile_size[1])
+
+    output_img = Image.new(image.mode,image.size)
+    sub_imgs = []
+    regions = []
+
+    for y in range(tiles[1]):
+        for x in range(tiles[0]):
+            regions.append((x*tile_size[0],y*tile_size[1],(x+1)*tile_size[0],(y+1)*tile_size[1]))
+
+    for i in ordering:
+        sub_imgs.append(image.crop(regions[i]))
+
+    for i in range(tiles[0]*tiles[1]):
+        output_img.paste(sub_imgs[i],regions[i])
+    output_img.save(out_path,format="png")
+
+    
